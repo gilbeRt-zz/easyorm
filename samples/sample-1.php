@@ -25,22 +25,32 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+error_reporting(E_ALL);
 include("../easyorm/easyorm.php");
 
 class Author extends EasyORM {
-    public $name =DB::String(50);
-    public $tags =DB::Relation("tags",DB::MANY);
+    function __construct() {
+        $this->name = DB::String(50);
+        $this->tags = DB::Relation("tags",DB::MANY);
+    }
 }
 
 class Books extends EasyORM {
-    public $author=DB::Relation("Author",DB::ONE);
-    public $title =DB::String(50);
-    public $pages =DB::Integer();
+    function __construct() {
+        $this->author=DB::Relation("Author",DB::ONE);
+        $this->title =DB::String(50);
+        $this->pages =DB::Integer();
+    }
 }
 
 class Tags extends EasyORM {
-    public $tag = DB::String(20);
+    function __construct() {
+        $this->tag = DB::String(20);
+    }
 }
 
+EasyORM::Connect("mysql://root@localhost/mypress");
+
+$b = new Author;
+$b->ByName("cesar");
 ?>

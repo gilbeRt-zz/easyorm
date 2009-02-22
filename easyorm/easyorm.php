@@ -26,10 +26,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-PHPORM::import("mysql.php");
+define("EORM_DRIVER_DIR","drivers/");
+
+EasyORM::import("sql.php");
 
 abstract class EasyORM {
+    private static $drivers;
+
     function __construct() {
+    }
+
+    public static function Connect($param) {
+        extract(parse_url($param));
+        if (!isset($scheme)) {
+            throw new Exception("$param is an invalid connection URI");
+        }
+        if (!EasyORM::import(EORM_DRIVER_DIR."/$scheme.php")) {
+            throw new Exception("There is not a driver for {$scheme}");
+        }
+        if (!EasyORM::isDriver($scheme)) {
+            throw new Exception("The driver $scheme is not working well");
+        }
+    }
+
+    public static function registerDriver($driver,$dbc,$sql) {
+        self::$drivers[$driver] = array("dbc"=>$dbc,"sql"=>$sql);
+    }
+
+    public static function isDriver($driver) {
+        return isset(self::$drivers[$driver]);
     }
 
     public static function import($file){
@@ -39,67 +64,42 @@ abstract class EasyORM {
             include($file);
             $loaded[$file] = true;
         }
+        return isset($loaded[$file]);
     }
 
     function __call($name,$params) {
+        var_dump($params);
+        die();
     }
 }
 
-abstract class StdSQL {
-    /**
-     *  Select
-     *
-     *  This function generated, based on the arguments, the SQL ANSI 92 SELECT
-     *  statement, usually this method is final (it is an standar).
-     *
-     *  @param string $table Table name
-     *  @param string|array $rows Array with columns to select, or the string "*"
-     *  @param array  $where 
-     *  @param array  $order
-     *  @return string The SQL statement.
-     *  @todo Very weak, it must be improved.
-     */
-    public function select($table,$rows='*',$where=array(),$order=array()) {
-        $sql = "SELECT ";
-        if (is_array($rows)) {
-            foreach($rows as $row) {
-                $sql .= $this->SkipFieldName($row).",";
-            }
-            $sql[strlen($sql)-1] = ' ';
-        } elseif ($rows=='*') {
-            $sql .= '* ';
-        } else {
-            return false;
-        }
-        $sql .= "FROM $table";
-        if (is_array($where) && count($where) > 0) {
-            $sql .= " WHERE ";
-            $wheresql = array();
-            foreach($where as $col => $value) {
-                $wheresql[] = $this->SkipFieldName($col)."=".$this->SkipValue($value);
-            }
-            $sql .= implode(" and ",$wheresql); 
-        }
-        if (is_array($order) && count($order) > 0) {
-            $sql .= " ORDER BY ";
-        }
-        return $sql;
+class DB {
+    const ONE='one';
+    const MANY='many';
+    public $type;
+    public $size;
+    public $rel;
+
+    function __construct($type,$size=0,$rel=null) {
+        $this->type=$type;
+        $this->size=$size;
+        $this->rel =$rel;
     }
 
-    public function insert($table,$rows) {
-        if (!is_array($rows) || count($rows) == 0) {
-            return false;
-        }
-        $cols = implode(",",array_map(array(&$this,"SkipFieldName"),array_keys($rows)));
-        $vals = implode(',',array_map(array(&$this,"SkipValue"),$rows));
-        $sql = "INSERT INTO ".$this->SkipFieldName($table)."($cols) VALUES($vals)";
-        return $sql;
+    public static function String($length) {
+        return new DB("string",$length);
     }
 
-    abstract public function SkipValue($name);
-    abstract public function SkipFieldName($name);
-    abstract public function GetTableDetails($table);
-    abstract public function ProcessTableDetails($table);
+    public static function Integer($length=11) {
+        return new DB("integer",$length);
+    }
+
+    public static function Relation($class,$rel=DB::ONE) {
+        if (!is_subclass_of($class,"EasyORM")) {
+            throw new Exception("$class is not an EasyORM subclass");
+        }
+        return new DB("relation:$class",0,$rel);
+    }
 }
 
 

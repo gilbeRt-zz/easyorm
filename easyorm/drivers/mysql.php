@@ -45,4 +45,6 @@ class MysqlSQL extends StdSQL {
     }
 }
 
+EasyORM::registerDriver("mysql","cesar","roas");
+
 ?>
