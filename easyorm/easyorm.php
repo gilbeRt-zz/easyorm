@@ -38,7 +38,7 @@ abstract class EasyORM {
     function __construct() {
     }
 
-    public static function Connect($param) {
+    public static function Setup($param) {
         $host=$user=$password=$db="";
         extract(parse_url($param));
         if (!isset($scheme)) {
@@ -78,7 +78,7 @@ abstract class EasyORM {
         return isset($loaded[$file]);
     }
 
-    function __call($name,$params) {
+    final function __call($name,$params) {
         var_dump($params);
         die();
     }
