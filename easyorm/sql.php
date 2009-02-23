@@ -84,5 +84,8 @@ abstract class StdSQL {
     abstract public function ProcessTableDetails($table);
 }
 
+interface DBMBase {
+    public function connect($host,$db,$user,$password);
+}
 
 ?>

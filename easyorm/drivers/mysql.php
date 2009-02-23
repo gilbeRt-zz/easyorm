@@ -45,6 +45,17 @@ class MysqlSQL extends StdSQL {
     }
 }
 
-EasyORM::registerDriver("mysql","cesar","roas");
+class MysqlDBM implements DBMBase {
+    private $dbm;
+
+    public function connect($host,$db,$user,$password) {
+        $this->dbm = & $dbm;
+        $dbm = mysql_connect($host,$user,$passwor);
+        if ($dbm===false) return false;
+        return mysql_select_db($db,$dbm);
+    }
+}
+
+EasyORM::registerDriver("mysql","MysqlDBM","MysqlSQL");
 
 ?>

@@ -32,11 +32,14 @@ EasyORM::import("sql.php");
 
 abstract class EasyORM {
     private static $drivers;
+    private static $dbm;
+    private static $sql;
 
     function __construct() {
     }
 
     public static function Connect($param) {
+        $host=$user=$password=$db="";
         extract(parse_url($param));
         if (!isset($scheme)) {
             throw new Exception("$param is an invalid connection URI");
@@ -47,10 +50,18 @@ abstract class EasyORM {
         if (!EasyORM::isDriver($scheme)) {
             throw new Exception("The driver $scheme is not working well");
         }
+        self::$dbm = new self::$drivers[$scheme]["dbm"];
+        self::$sql = new self::$drivers[$scheme]["sql"];
     }
 
-    public static function registerDriver($driver,$dbc,$sql) {
-        self::$drivers[$driver] = array("dbc"=>$dbc,"sql"=>$sql);
+    public static function registerDriver($driver,$dbm,$sql) {
+        if (!is_subclass_of($sql,"StdSQL")) {
+            throw new Exception("$sql is not a subclass of StdSQL");
+        }
+        if (array_search("DBMBase",class_implements($dbm))===false) {
+            throw new Exception("$dbm do not implements DBMBase interface");
+        }
+        self::$drivers[$driver] = array("dbm"=> $dbm,"sql"=> $sql);
     }
 
     public static function isDriver($driver) {
@@ -70,6 +81,9 @@ abstract class EasyORM {
     function __call($name,$params) {
         var_dump($params);
         die();
+    }
+
+    final public function save() {
     }
 }
 
