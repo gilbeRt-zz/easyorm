@@ -30,17 +30,18 @@ include("../easyorm/easyorm.php");
 
 class Author extends EasyORM {
     function __construct() {
-        $this->name = DB::String(50);
-        $this->surname = DB::String(50);
+        $this->name     = DB::String(50);
+        $this->surname  = DB::String(50);
+        $this->book    = DB::Relation("Books",DB::MANY);
     }
 }
 
 class Books extends EasyORM {
     function __construct() {
-        $this->author=DB::Relation("Author",DB::ONE);
-        $this->title =DB::String(50);
-        $this->pages =DB::Integer();
-        $this->tags = DB::Relation("tags",DB::MANY);
+        $this->author   = DB::Relation("Author",DB::ONE);
+        $this->title    = DB::String(50);
+        $this->pages    = DB::Integer();
+        $this->tags     = DB::Relation("tags",DB::MANY);
     }
 }
 
@@ -58,7 +59,10 @@ $author->name = "Foobar"
 $author->surname = "Author";
 $author->save();
 
-/*  adding a book */
+/* add two books */
+$author->addBook(array("pages"=>30,"title"=>"somebook"),array("pages"=>20,"title"=>"another one"));
+
+/*  adding a book  (another way") */
 $book = new Book;
 $book->author = $author;
 $book->pages = 30;
@@ -82,4 +86,9 @@ foreach($books->ByAuthorId($author->id) as $book) {
     $book->save();
 }
 
+/* another way to get author's book */
+foreach($author->getBook() as $book) {
+    $book->pages=30;
+    $book->save();
+}
 ?>
