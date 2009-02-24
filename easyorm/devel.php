@@ -27,63 +27,27 @@
  */
 
 
-class MysqlSQL extends StdSQL {
-    public function SkipValue($name) {
-        return '"'.addslashes($name).'"';
-    }
-
-    public function SkipFieldName($name) {
-        return "`$name`";
-    }
-
-    public function GetTableDetails($table) {
-        return "desc $table";
-    }
-
-    public function ProcessTableDetails($table) {
-         
-    }
-}
-
-class MysqlDBM implements DBMBase {
-    private $dbm=false;
-    private $host;
-    private $user;
-    private $password;
-    private $db;
-
-    function __construct($host,$user,$password,$db) {
-        $this->host = $host;
-        $this->user = $user;
-        $this->password = $password;
-        $this->password = $password;
-        $this->db = $db;
-    }
-
-    function doConnect() {
-        $this->dbm = & $dbm;
-        $dbm = mysql_connect($this->host,$this->user,$this->password);
-        if ($dbm===false) return false;
-        return mysql_select_db($this->db,$dbm);
-    }
-
-    function isConnected() {
-        return $this->dbm !== false;
-    }
-
-    function BufferedQuery($sql) {
-        $query = mysql_query($sql,$this->dbm);
-        if ($query===false) {
-            return false;
+function easyorm_check_model($model) {
+    if (!is_subclass_of($model,"easyorm"))
+        throw new Exception("$model is not a EasyORM subclass");
+    $dbm = new $model;
+    foreach(get_object_vars($dbm) as $col=>$val) {
+        if ($val InstanceOf DB) {
+            $x=array($col,$val);
         }
-        $r = array();
-        while ($row = mysql_fetch_object($query)) 
-            $r[] = $row;
-        mysql_free_result($query);
-        return $r;
+    }
+    /* now compare the model against the DB table */
+    $table = $dbm->getTableStructure();
+    if ($table === false) {
+        /* create table */
+        return;
     }
 }
 
-EasyORM::registerDriver("mysql","MysqlDBM","MysqlSQL");
+foreach(get_declared_classes() as $class) {
+    if (!is_subclass_of($class,"easyorm")) continue;
+    easyorm_check_model($class);
+}
+die();
 
 ?>

@@ -34,13 +34,19 @@ abstract class EasyORM {
     private static $drivers;
     private static $dbm;
     private static $sql;
+    public $table=false;
 
-    function __construct() {
+    final function __construct() {
+        if ($this->table === false) {
+            $this->table = get_class($this);
+        }
+        $this->data();
     }
 
-    public static function Setup($param) {
-        $host=$user=$password=$db="";
+    public static function SetDB($param) {
+        $host=$user=$password="";
         extract(parse_url($param));
+        $db = substr($path,1);
         if (!isset($scheme)) {
             throw new Exception("$param is an invalid connection URI");
         }
@@ -50,7 +56,7 @@ abstract class EasyORM {
         if (!EasyORM::isDriver($scheme)) {
             throw new Exception("The driver $scheme is not working well");
         }
-        self::$dbm = new self::$drivers[$scheme]["dbm"];
+        self::$dbm = new self::$drivers[$scheme]["dbm"]($host,$user,$password,$db);
         self::$sql = new self::$drivers[$scheme]["sql"];
     }
 
@@ -78,13 +84,53 @@ abstract class EasyORM {
         return isset($loaded[$file]);
     }
 
+    public static function SetupAll() {
+        self::import("devel.php");
+    }
+
+    private static function doConnect() {
+        $oDbm = & self::$dbm;
+        if (!$oDbm->isConnected()) {
+            if (!$oDbm->doConnect()) {
+                throw new Exception("Error while connecting to the DB");
+            }
+        }
+    }
+
+    private static function Query($sql) {
+        $oDbm = & self::$dbm;
+        self::doConnect();
+        return $oDbm->BufferedQuery($sql);
+    }
+
+    final function getTableStructure() {
+        $oSql = & self::$sql;
+        $sql  = $oSql->getTableDetails($this->table);
+        $result = self::query($sql);
+        if (!$result) {
+            return false;
+        }
+        return $oSql->ProcessTableDetails($result);
+    }
+
     final function __call($name,$params) {
-        var_dump($params);
+        $action = substr($name,0,3);
+        var_dump($name,$params);
+        switch (strtolower($action)) {
+            case "add":
+                break;
+            default:
+                break;
+        }
         die();
     }
 
     final public function save() {
+        if ($this->id) {
+        }
     }
+
+    abstract function data();
 }
 
 class DB {

@@ -29,15 +29,15 @@ error_reporting(E_ALL);
 include("../easyorm/easyorm.php");
 
 class Author extends EasyORM {
-    function __construct() {
+    function data() {
         $this->name     = DB::String(50);
         $this->surname  = DB::String(50);
-        $this->book    = DB::Relation("Books",DB::MANY);
+        $this->book     = DB::Relation("Books",DB::MANY);
     }
 }
 
 class Books extends EasyORM {
-    function __construct() {
+    function data() {
         $this->author   = DB::Relation("Author",DB::ONE);
         $this->title    = DB::String(50);
         $this->pages    = DB::Integer();
@@ -46,16 +46,20 @@ class Books extends EasyORM {
 }
 
 class Tags extends EasyORM {
-    function __construct() {
-        $this->tag = DB::String(20);
+    function data() {
+        $this->tag  = DB::String(20);
+        $this->book = DB::Relation("Books",DB::MANY);
     }
 }
 
-EasyORM::Setup("mysql://root@localhost/mypress");
+/* Set connection parameter */
+EasyORM::SetDB("mysql://root@localhost/easyorm");
+
+EasyORM::SetupAll();
 
 /* insert */
 $author = new Author;
-$author->name = "Foobar"
+$author->name = "Foobar";
 $author->surname = "Author";
 $author->save();
 

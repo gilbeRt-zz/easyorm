@@ -85,7 +85,9 @@ abstract class StdSQL {
 }
 
 interface DBMBase {
-    public function connect($host,$db,$user,$password);
+    public function __construct($host,$user,$password,$db);
+    public function doconnect();
+    public function isconnected();
 }
 
 ?>
