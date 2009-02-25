@@ -40,9 +40,15 @@ class MysqlSQL extends StdSQL {
         return "desc $table";
     }
 
+
     public function ProcessTableDetails($table) {
-        var_dump($table);
-        die();
+        if (!is_array($table) || count($table)==0) return false;
+        $columns=array();
+        foreach($table as $column) {
+            list($type,$size) = $this->get_col_type($column->Type);
+            $columns[$column->Field] = DB::$type($size);
+        }
+        return $columns;
     }
 }
 

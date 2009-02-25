@@ -124,6 +124,14 @@ abstract class EasyORM {
         return self::Execute($csql);
     }
 
+    final function add_column($column,$def) {
+        die("add:$column");
+    }
+
+    final function del_column($column) {
+        die("del:$column");
+    }
+
     final function __call($name,$params) {
         $action = substr($name,0,3);
         var_dump($name,$params);

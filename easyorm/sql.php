@@ -89,6 +89,21 @@ abstract class StdSQL {
         }
     }
 
+    protected function get_col_type($col) {
+        preg_match("/([a-z]+)\(([0-9]+)\)?/i",$col,$parse);
+        switch(strtolower($parse[1])) {
+            case "int":
+            case "integer":
+                return array("integer",$parse[2]);
+                break;
+            case "varchar":
+                return array("string",$parse[2]);
+                break;
+            default:
+                throw new Exception("Internal error, don't how to handle {$parse[1]} sql type");
+        }
+    }
+
     public function create_table($table,$def) {
         if (!is_array($def) || count($def) == 0) {
             return false;

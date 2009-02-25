@@ -80,6 +80,13 @@ function easyorm_create_table($model,$table) {
         /* create the tabl */
         $model->create_table(get_object_vars($model));
     } else {
+        /* compare our model against the table */
+        foreach(get_object_vars($model) as $col=>$def) {
+            if (!$def InstanceOf DB) continue;
+            if (!isset($table[$col])) {
+                die("create $col");
+            }
+        }
     }
 }
 
