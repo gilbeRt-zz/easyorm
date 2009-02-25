@@ -41,7 +41,8 @@ class MysqlSQL extends StdSQL {
     }
 
     public function ProcessTableDetails($table) {
-         
+        var_dump($table);
+        die();
     }
 }
 
@@ -76,11 +77,16 @@ class MysqlDBM implements DBMBase {
         if ($query===false) {
             return false;
         }
+        if (mysql_num_rows($query)==0) return;
         $r = array();
         while ($row = mysql_fetch_object($query)) 
             $r[] = $row;
         mysql_free_result($query);
         return $r;
+    }
+
+    function Execute($sql) {
+        return mysql_unbuffered_query($sql,$this->dbm);
     }
 }
 

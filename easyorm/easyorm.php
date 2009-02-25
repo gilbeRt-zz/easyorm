@@ -97,6 +97,10 @@ abstract class EasyORM {
         }
     }
 
+    public static function Execute($sql) {
+        return self::$dbm->Execute($sql);
+    }
+
     private static function Query($sql) {
         $oDbm = & self::$dbm;
         self::doConnect();
@@ -113,6 +117,13 @@ abstract class EasyORM {
         return $oSql->ProcessTableDetails($result);
     }
 
+    final function create_table($param) {
+        $dbm = & self::$dbm;
+        $sql = & self::$sql;
+        $csql = $sql->create_table($this->table,$param);
+        return self::Execute($csql);
+    }
+
     final function __call($name,$params) {
         $action = substr($name,0,3);
         var_dump($name,$params);
@@ -126,8 +137,6 @@ abstract class EasyORM {
     }
 
     final public function save() {
-        if ($this->id) {
-        }
     }
 
     abstract function data();
@@ -139,11 +148,13 @@ class DB {
     public $type;
     public $size;
     public $rel;
+    public $extra;
 
-    function __construct($type,$size=0,$rel=null) {
+    function __construct($type,$size=0,$rel=null,$extra=null) {
         $this->type=$type;
         $this->size=$size;
         $this->rel =$rel;
+        $this->extra=$extra;
     }
 
     public static function String($length) {
@@ -158,7 +169,7 @@ class DB {
         if (!is_subclass_of($class,"EasyORM")) {
             throw new Exception("$class is not an EasyORM subclass");
         }
-        return new DB("relation:$class",0,$rel);
+        return new DB("relation",0,$rel,$class);
     }
 }
 

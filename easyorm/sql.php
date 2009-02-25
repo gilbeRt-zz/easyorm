@@ -78,6 +78,32 @@ abstract class StdSQL {
         return $sql;
     }
 
+    private function get_sql_type($col) {
+        switch (strtolower($col->type)) {
+            case 'string':
+                return 'varchar('.$col->size.')';
+            case 'integer':
+                return 'integer';
+            default:
+                throw new Exception("Internal Error, Don't know how to representate the {$col->type} in SQL");
+        }
+    }
+
+    public function create_table($table,$def) {
+        if (!is_array($def) || count($def) == 0) {
+            return false;
+        }
+        $sql = "CREATE TABLE ".$this->SkipFieldName($table)."(";
+            $cols = array("id int primary key auto_increment");
+            foreach($def as $col=>$val) {
+                if (!$val InstanceOf DB) continue;
+                if ($val->type=='relation') continue;
+                $cols[] = $this->SkipFieldName($col)." ".$this->get_sql_type($val);
+            }
+        $sql.= implode(",",$cols).")";
+        return $sql;
+    }
+
     abstract public function SkipValue($name);
     abstract public function SkipFieldName($name);
     abstract public function GetTableDetails($table);

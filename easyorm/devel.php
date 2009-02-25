@@ -26,28 +26,69 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+function easyorm_get_model_relationship($model,$relation) {
+    if (!$model InstanceOf EasyORM) return false;
+    foreach(get_object_vars($model) as $col=>$value) {
+        if (!$value InstanceOf DB) continue;
+        if ($value->type=='relation' && strtolower($value->extra)==strtolower($relation)) {
+            return $col;
+        }
+    }
+    return false;
+}
 
 function easyorm_check_model($model) {
-    if (!is_subclass_of($model,"easyorm"))
+    if (!is_subclass_of($model,"easyorm")) {
         throw new Exception("$model is not a EasyORM subclass");
+    }
     $dbm = new $model;
+    /**
+      *  Check relationship with other classes
+      */
     foreach(get_object_vars($dbm) as $col=>$val) {
-        if ($val InstanceOf DB) {
-            $x=array($col,$val);
+        if (!$val InstanceOf DB) continue;
+        if ($val->type=='relation') {
+            if (!is_subclass_of($val->extra,"easyorm")) {
+                throw new Exception("Error, $mode::$col reference to a class doesn't exists {$val->extra}");
+            }
+            $rel = new $val->extra;
+            $col = easyorm_get_model_relationship($rel,$model);
+            if ($col===false) {
+                throw new Exception("There is not a colum that represent the relationship to $model into {$val->extra}");
+            }
+            if ($rel->$col->rel == DB::MANY && DB::MANY == $val->rel) {
+                /**
+                 *  Many <-> Many
+                 *  Create a auxiliar table to save the relation ship.
+                 */
+                $table = strcmp($model,$val->extra) ? "${model}_{$val->extra}" : "{$val->extra}_$model";
+            } else if ($val->rel == DB::MANY) {
+                /**
+                 *  Many -> One relation ship, create an
+                 *  index.
+                 */
+                easyorm_create_index($dbm->table,$col);
+            }
         }
     }
     /* now compare the model against the DB table */
-    $table = $dbm->getTableStructure();
-    if ($table === false) {
-        /* create table */
-        return;
+    easyorm_create_table($dbm,$dbm->getTableStructure());
+}
+
+function easyorm_create_table($model,$table) {
+    if ($table===false) {
+        /* create the tabl */
+        $model->create_table(get_object_vars($model));
+    } else {
     }
+}
+
+function easyorm_create_index() {
 }
 
 foreach(get_declared_classes() as $class) {
     if (!is_subclass_of($class,"easyorm")) continue;
     easyorm_check_model($class);
 }
-die();
 
 ?>
