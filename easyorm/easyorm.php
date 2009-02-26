@@ -28,9 +28,32 @@
 
 define("EORM_DRIVER_DIR","drivers/");
 
-EasyORM::import("sql.php");
 
-abstract class EasyORM {
+/**
+ *  ORecord
+ *
+ *  This class define the Iterable interface, 
+ *
+ */
+abstract class ORecord implements Iterator {
+    protected $records;
+    final public function rewind() {
+    }
+
+    final public function current() {
+    }
+
+    final public function key() {
+    }
+
+    final public function next() {
+    }
+
+    final public function valid() {
+    }
+} 
+
+abstract class EasyORM  extends ORecord {
     private static $drivers;
     private static $dbm;
     private static $sql;
@@ -40,9 +63,19 @@ abstract class EasyORM {
         if ($this->table === false) {
             $this->table = get_class($this);
         }
+        $this->id = null;
         $this->data();
+        $this->id = DB::Integer();
     }
 
+    /**
+     *  Set DB 
+     *
+     *  This function set-up the connection DB connection 
+     *  URI.
+     *
+     *  @param string $param 
+     */
     public static function SetDB($param) {
         $host=$user=$password="";
         extract(parse_url($param));
@@ -125,23 +158,25 @@ abstract class EasyORM {
     }
 
     final function add_column($column,$def) {
-        die("add:$column");
+        $dbm = & self::$dbm;
+        $sql = & self::$sql;
+        return self::Execute($sql->add_column($this->table,$column,$def));
     }
 
     final function del_column($column) {
-        die("del:$column");
+        return self::Execute(self::$sql->del_column($this->table,$column));
     }
 
-    final function __call($name,$params) {
+    final function & __call($name,$params) {
         $action = substr($name,0,3);
-        var_dump($name,$params);
+        //var_dump($name,$params);
         switch (strtolower($action)) {
             case "add":
                 break;
             default:
                 break;
         }
-        die();
+        return $this;
     }
 
     final public function save() {
@@ -181,5 +216,6 @@ class DB {
     }
 }
 
+EasyORM::import("sql.php");
 
 ?>

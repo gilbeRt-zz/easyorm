@@ -119,6 +119,21 @@ abstract class StdSQL {
         return $sql;
     }
 
+    public function add_column($table,$name,$definition) {
+        if (!$definition InstanceOf DB) return false;
+        $table = $this->SkipFieldName($table);
+        $name  = $this->SkipFieldName($name);
+        $def   = $name." ".$this->get_sql_type($definition);
+        return "ALTER TABLE $table ADD COLUMN  $def";
+    }
+
+    public function del_column($table,$name) {
+        $table = $this->SkipFieldName($table);
+        $name  = $this->SkipFieldName($name);
+        return "ALTER TABLE $table DROP COLUMN $name";
+    }
+
+
     abstract public function SkipValue($name);
     abstract public function SkipFieldName($name);
     abstract public function GetTableDetails($table);

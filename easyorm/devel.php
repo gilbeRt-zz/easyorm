@@ -80,11 +80,18 @@ function easyorm_create_table($model,$table) {
         /* create the tabl */
         $model->create_table(get_object_vars($model));
     } else {
-        /* compare our model against the table */
+        /* compare our model against the table (add new column) */
         foreach(get_object_vars($model) as $col=>$def) {
             if (!$def InstanceOf DB) continue;
+            if ($def->type == 'relation') continue;
             if (!isset($table[$col])) {
-                die("create $col");
+                $model->add_column($col,$def);
+            }
+        }
+        /* compare table against model (delete column) */
+        foreach($table as $id=>$column) {
+            if (!isset($model->$id)) {
+                $model->del_column($id,$column);
             }
         }
     }

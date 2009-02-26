@@ -67,24 +67,24 @@ $author->save();
 $author->addBook(array("pages"=>30,"title"=>"somebook"),array("pages"=>20,"title"=>"another one"));
 
 /*  adding a book  (another way") */
-$book = new Book;
+$book = new Books;
 $book->author = $author;
 $book->pages = 30;
 $book->title = "Foobar text";
 $book->save();
 
 /* adding another book (another way)  */
-new Book(array("author"=>$author,"pages"=>20,"title"=>"foobar"));
+new Books(array("author"=>$author,"pages"=>20,"title"=>"foobar"));
 
 /* select and update test */
-$books = new Book;
+$books = new Books;
 foreach($books->ByAuthor($author) as $book) {
     $book->pages = 20; 
     $book->save();
 }
 
 /* select (passing a value instead of a object) and update test */
-$books = new Book;
+$books = new Books;
 foreach($books->ByAuthorId($author->id) as $book) {
     $book->pages = 20; 
     $book->save();
