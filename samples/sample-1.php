@@ -30,8 +30,8 @@ include("../easyorm/easyorm.php");
 
 class Author extends EasyORM {
     function data() {
-        $this->name     = DB::String(array("size"=>50,"not_null"=>true));
-        $this->surname  = DB::String(array("size"=>50,"not_null"=>true));
+        $this->name     = DB::String(array("size"=>50,"required"=>true));
+        $this->surname  = DB::String(array("size"=>50,"required"=>true));
         $this->book     = DB::Relation("Books",DB::MANY);
     }
 }
@@ -39,7 +39,7 @@ class Author extends EasyORM {
 class Books extends EasyORM {
     function data() {
         $this->author   = DB::Relation("Author",DB::ONE);
-        $this->title    = DB::String(array("not_null"=>true,"size"=>50));
+        $this->title    = DB::String(array("required"=>true,"size"=>50));
         $this->pages    = DB::Integer();
         $this->tags     = DB::Relation("tags",DB::MANY);
     }
@@ -47,7 +47,7 @@ class Books extends EasyORM {
 
 class Tags extends EasyORM {
     function data() {
-        $this->tag  = DB::String(array("size"=>20,"not_null"=>true));
+        $this->tag  = DB::String(array("size"=>20,"required"=>true));
         $this->book = DB::Relation("Books",DB::MANY);
     }
 }

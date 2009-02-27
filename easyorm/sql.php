@@ -123,7 +123,7 @@ abstract class StdSQL {
                     $col .= " auto_increment ";
                 }
                 /*  not null */
-                if (isset($val->not_null) && $val->not_null) {
+                if (isset($val->required) && $val->required) {
                     $col .= " NOT NULL ";
                 } else {
                     $col .= " NULL ";

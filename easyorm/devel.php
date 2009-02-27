@@ -70,8 +70,8 @@ function easyorm_check_model($model) {
                 $table = new DevelORM;
                 $table->table = strcmp($model,$val->extra) ? "${model}_{$val->extra}" : "{$val->extra}_$model";
                 $nmodel = $val->extra;
-                $table->$nmodel  = DB::Integer(array("not_null"=>true));
-                $table->$model   = DB::Integer(array("not_null"=>true));
+                $table->$nmodel  = DB::Integer(array("required"=>true));
+                $table->$model   = DB::Integer(array("required"=>true));
                 /* create reference (many::many) table */
                 easyorm_create_table($table,false);
             } else if ($val->rel == DB::MANY) {
