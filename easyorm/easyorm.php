@@ -183,8 +183,24 @@ abstract class EasyORM  extends ORecord {
         $dbm = & self::$dbm;
         $sql = & self::$sql;
         $csql = $sql->create_table($this->table,$param);
-        echo $csql."\n\n\n";
         return self::Execute($csql);
+    }
+
+    final function add_index($type,$columns) {
+        $dbm = & self::$dbm;
+        $sql = & self::$sql;
+        switch($type) {
+            case DB::UNIQUE:
+            case DB::INDEX:
+                $name = $this->table."_".implode("_",$columns);
+                $name = strtolower($name);
+                $oSql = $sql->create_index($this->table,$name,$type,$columns);
+                $this->Execute($oSql);
+                break;
+            default:
+                throw new Exception('Unkown $type');
+                break;
+        }
     }
 
     /** 
@@ -223,6 +239,8 @@ abstract class EasyORM  extends ORecord {
     }
 
     final public function save() {
+        var_dump($this->id);
+        die();
     }
 
     final public function __set($var,$value) {
@@ -248,6 +266,8 @@ abstract class EasyORM  extends ORecord {
 class DB {
     const ONE='one';
     const MANY='many';
+    const UNIQUE='unique';
+    const INDEX='index';
     public $type;
     public $size;
     public $rel;

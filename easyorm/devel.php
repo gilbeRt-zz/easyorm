@@ -67,13 +67,16 @@ function easyorm_check_model($model) {
                  *  Many <-> Many
                  *  Create a auxiliar table to save the relation ship.
                  */
+                $nmodel = strtolower($val->extra);
+                $model  = strtolower($model);
                 $table = new DevelORM;
-                $table->table = strcmp($model,$val->extra) ? "${model}_{$val->extra}" : "{$val->extra}_$model";
-                $nmodel = $val->extra;
+                $table->table = strcmp($model,$nmodel)<1 ? "${model}_{$nmodel}" : "{$nmodel}_$model";
                 $table->$nmodel  = DB::Integer(array("required"=>true));
                 $table->$model   = DB::Integer(array("required"=>true));
                 /* create reference (many::many) table */
                 easyorm_create_table($table,false);
+                /*  */
+                $table->add_index(DB::UNIQUE,array($model,$nmodel));
             } else if ($val->rel == DB::MANY) {
                 /**
                  *  Many -> One relation ship, create an

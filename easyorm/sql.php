@@ -148,6 +148,19 @@ abstract class StdSQL {
         return "ALTER TABLE $table DROP COLUMN $name";
     }
 
+    public function create_index($table,$name,$type, $columns) {
+        $table = $this->skipFieldName($table);
+        $name = $this->skipFieldName($name);
+        $columns = array_map(array(&$this,"SkipFieldName"),$columns);   
+        if ($type == 'index') 
+            $sql = "CREATE INDEX ";
+        else
+            $sql = "CREATE UNIQUE INDEX ";
+        $sql .= "$name ON $table";
+        $sql .= "(".implode(",",$columns).")";
+        return $sql;
+    }
+
 
     abstract public function SkipValue($name);
     abstract public function SkipFieldName($name);
