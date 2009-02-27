@@ -26,6 +26,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+class DevelORM extends EasyORM {
+    function data() {}
+}
+
 function easyorm_get_model_relationship($model,$relation) {
     if (!$model InstanceOf EasyORM) return false;
     foreach(get_object_vars($model) as $col=>$value) {
@@ -42,6 +46,7 @@ function easyorm_check_model($model) {
         throw new Exception("$model is not a EasyORM subclass");
     }
     $dbm = new $model;
+    $dbm->scheme();
     /**
       *  Check relationship with other classes
       */
@@ -52,16 +57,23 @@ function easyorm_check_model($model) {
                 throw new Exception("Error, $mode::$col reference to a class doesn't exists {$val->extra}");
             }
             $rel = new $val->extra;
+            $rel->scheme();
             $col = easyorm_get_model_relationship($rel,$model);
             if ($col===false) {
-                throw new Exception("There is not a colum that represent the relationship to $model into {$val->extra}");
+                throw new Exception("There is not a column that represent the relationship to $model into {$val->extra}");
             }
             if ($rel->$col->rel == DB::MANY && DB::MANY == $val->rel) {
                 /**
                  *  Many <-> Many
                  *  Create a auxiliar table to save the relation ship.
                  */
-                $table = strcmp($model,$val->extra) ? "${model}_{$val->extra}" : "{$val->extra}_$model";
+                $table = new DevelORM;
+                $table->table = strcmp($model,$val->extra) ? "${model}_{$val->extra}" : "{$val->extra}_$model";
+                $nmodel = $val->extra;
+                $table->$nmodel  = DB::Integer(array("not_null"=>true));
+                $table->$model   = DB::Integer(array("not_null"=>true));
+                /* create reference (many::many) table */
+                easyorm_create_table($table,false);
             } else if ($val->rel == DB::MANY) {
                 /**
                  *  Many -> One relation ship, create an
@@ -77,7 +89,7 @@ function easyorm_check_model($model) {
 
 function easyorm_create_table($model,$table) {
     if ($table===false) {
-        /* create the tabl */
+        /* create the table */
         $model->create_table(get_object_vars($model));
     } else {
         /* compare our model against the table (add new column) */
@@ -101,7 +113,7 @@ function easyorm_create_index() {
 }
 
 foreach(get_declared_classes() as $class) {
-    if (!is_subclass_of($class,"easyorm")) continue;
+    if (!is_subclass_of($class,"easyorm") || strtolower($class)=='develorm') continue;
     easyorm_check_model($class);
 }
 

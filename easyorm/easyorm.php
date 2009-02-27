@@ -37,19 +37,29 @@ define("EORM_DRIVER_DIR","drivers/");
  */
 abstract class ORecord implements Iterator {
     protected $records;
+    protected $actual=0;
+
     final public function rewind() {
+        $this->actual = 0;
     }
 
-    final public function current() {
+    final public function & current() {
+        foreach(get_object_vars($this->records[$this->actual]) as $key => $value) {
+            $this->$key = $value;
+        }
+        return $this;
     }
 
     final public function key() {
+        return $this->actual;
     }
 
     final public function next() {
+        $this->actual++;
     }
 
     final public function valid() {
+        return $this->actual < count($this->records);
     }
 } 
 
@@ -57,15 +67,28 @@ abstract class EasyORM  extends ORecord {
     private static $drivers;
     private static $dbm;
     private static $sql;
-    public $table=false;
+    private $table=false;
 
-    final function __construct() {
+    final public function __construct() {
         if ($this->table === false) {
-            $this->table = get_class($this);
+            $this->table = strtolower(get_class($this));
         }
-        $this->id = null;
+        $params = func_get_args();
+        if (count($params) > 0) {
+            /* insert */
+            //var_dump($this,$params);
+        } 
+    }
+
+    /**
+     *
+     *
+     */
+    final public function scheme() {
+        $id = DB::Integer(array("auto_increment"=>true));
+        $this->id = $id;
         $this->data();
-        $this->id = DB::Integer();
+        $this->id = $id;
     }
 
     /**
@@ -76,7 +99,7 @@ abstract class EasyORM  extends ORecord {
      *
      *  @param string $param 
      */
-    public static function SetDB($param) {
+    public final static function SetDB($param) {
         $host=$user=$password="";
         extract(parse_url($param));
         $db = substr($path,1);
@@ -93,7 +116,7 @@ abstract class EasyORM  extends ORecord {
         self::$sql = new self::$drivers[$scheme]["sql"];
     }
 
-    public static function registerDriver($driver,$dbm,$sql) {
+    public final static function registerDriver($driver,$dbm,$sql) {
         if (!is_subclass_of($sql,"StdSQL")) {
             throw new Exception("$sql is not a subclass of StdSQL");
         }
@@ -103,11 +126,11 @@ abstract class EasyORM  extends ORecord {
         self::$drivers[$driver] = array("dbm"=> $dbm,"sql"=> $sql);
     }
 
-    public static function isDriver($driver) {
+    public final static function isDriver($driver) {
         return isset(self::$drivers[$driver]);
     }
 
-    public static function import($file){
+    public final static function import($file){
         static $loaded=array();
         $file=dirname(__FILE__)."/$file";
         if (is_file($file) && !isSet($loaded[$file])) {
@@ -117,11 +140,11 @@ abstract class EasyORM  extends ORecord {
         return isset($loaded[$file]);
     }
 
-    public static function SetupAll() {
+    public final static function SetupAll() {
         self::import("devel.php");
     }
 
-    private static function doConnect() {
+    private final static function doConnect() {
         $oDbm = & self::$dbm;
         if (!$oDbm->isConnected()) {
             if (!$oDbm->doConnect()) {
@@ -130,15 +153,21 @@ abstract class EasyORM  extends ORecord {
         }
     }
 
-    public static function Execute($sql) {
+    /** 
+     *  
+     *
+     *
+     */
+    public final static function Execute($sql) {
         return self::$dbm->Execute($sql);
     }
 
-    private static function Query($sql) {
+    protected final static function Query($sql) {
         $oDbm = & self::$dbm;
         self::doConnect();
         return $oDbm->BufferedQuery($sql);
     }
+
 
     final function getTableStructure() {
         $oSql = & self::$sql;
@@ -154,15 +183,29 @@ abstract class EasyORM  extends ORecord {
         $dbm = & self::$dbm;
         $sql = & self::$sql;
         $csql = $sql->create_table($this->table,$param);
+        echo $csql."\n\n\n";
         return self::Execute($csql);
     }
 
-    final function add_column($column,$def) {
+    /** 
+     *  Add Column
+     *
+     *  
+     */
+    final function add_column($column,DB $def) {
         $dbm = & self::$dbm;
         $sql = & self::$sql;
         return self::Execute($sql->add_column($this->table,$column,$def));
     }
 
+    /**
+     *  Delete column
+     *  
+     *  Delete the $column from the actual objects' table.
+     *
+     *  @param string $column The Column name to delete
+     *  @return bool True if success.
+     */
     final function del_column($column) {
         return self::Execute(self::$sql->del_column($this->table,$column));
     }
@@ -182,6 +225,23 @@ abstract class EasyORM  extends ORecord {
     final public function save() {
     }
 
+    final public function __set($var,$value) {
+        switch($var) {
+            case "table":
+                $this->$var = strtolower($value);
+                break;
+            default:
+                if ($value instanceof DB)
+                    $this->$var = $value;
+                break;
+        } 
+    }
+
+    final public function __get($var) {
+        return isset($this->$var) ? $this->$var : false;
+    }
+
+
     abstract function data();
 }
 
@@ -193,26 +253,41 @@ class DB {
     public $rel;
     public $extra;
 
-    function __construct($type,$size=0,$rel=null,$extra=null) {
+    function __construct($type,$extras) {
         $this->type=$type;
-        $this->size=$size;
-        $this->rel =$rel;
-        $this->extra=$extra;
+        if (count($extras)==1 && is_numeric($extras[0]))  {
+            $this->size=$extras[0];
+        } else { 
+            foreach ($extras[0] as $k=>$v) {
+                $this->$k=$v;
+            }
+        }
+        if (isset($this->auto_increment)&&$this->auto_increment) {
+            $this->primary_key = true;
+        }
     }
 
-    public static function String($length) {
-        return new DB("string",$length);
+    public static function String() {
+        $param = func_get_args();
+        if (count($param)==0) {
+            $param[] = 255;
+        }
+        return new DB("string",$param);
     }
 
-    public static function Integer($length=11) {
-        return new DB("integer",$length);
+    public static function Integer() {
+        $param = func_get_args();
+        if (count($param)==0) {
+            $param[] = 11;
+        }
+        return new DB("integer",$param);
     }
 
     public static function Relation($class,$rel=DB::ONE) {
         if (!is_subclass_of($class,"EasyORM")) {
             throw new Exception("$class is not an EasyORM subclass");
         }
-        return new DB("relation",0,$rel,$class);
+        return new DB("relation",array(array("rel"=>$rel,"extra"=>$class)));
     }
 }
 

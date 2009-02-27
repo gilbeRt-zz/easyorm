@@ -92,7 +92,7 @@ class MysqlDBM implements DBMBase {
     }
 
     function Execute($sql) {
-        return mysql_unbuffered_query($sql,$this->dbm);
+        return mysql_unbuffered_query($sql,$this->dbm)!==false;
     }
 }
 

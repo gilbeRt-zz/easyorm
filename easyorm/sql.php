@@ -109,11 +109,26 @@ abstract class StdSQL {
             return false;
         }
         $sql = "CREATE TABLE ".$this->SkipFieldName($table)."(";
-            $cols = array("id int primary key auto_increment");
+            $cols  = array();
             foreach($def as $col=>$val) {
                 if (!$val InstanceOf DB) continue;
                 if ($val->type=='relation') continue;
-                $cols[] = $this->SkipFieldName($col)." ".$this->get_sql_type($val);
+                $col = $this->SkipFieldName($col)." ".$this->get_sql_type($val);
+                /* primary key */
+                if (isset($val->primary_key) && $val->primary_key) {
+                    $col .= " primary key ";
+                }
+                /* auto increment */
+                if (isset($val->auto_increment) && $val->auto_increment) {
+                    $col .= " auto_increment ";
+                }
+                /*  not null */
+                if (isset($val->not_null) && $val->not_null) {
+                    $col .= " NOT NULL ";
+                } else {
+                    $col .= " NULL ";
+                }
+                $cols[] = $col;
             }
         $sql.= implode(",",$cols).")";
         return $sql;

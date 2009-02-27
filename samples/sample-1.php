@@ -30,8 +30,8 @@ include("../easyorm/easyorm.php");
 
 class Author extends EasyORM {
     function data() {
-        $this->name     = DB::String(50);
-        $this->surname  = DB::String(50);
+        $this->name     = DB::String(array("size"=>50,"not_null"=>true));
+        $this->surname  = DB::String(array("size"=>50,"not_null"=>true));
         $this->book     = DB::Relation("Books",DB::MANY);
     }
 }
@@ -39,7 +39,7 @@ class Author extends EasyORM {
 class Books extends EasyORM {
     function data() {
         $this->author   = DB::Relation("Author",DB::ONE);
-        $this->title    = DB::String(50);
+        $this->title    = DB::String(array("not_null"=>true,"size"=>50));
         $this->pages    = DB::Integer();
         $this->tags     = DB::Relation("tags",DB::MANY);
     }
@@ -47,7 +47,7 @@ class Books extends EasyORM {
 
 class Tags extends EasyORM {
     function data() {
-        $this->tag  = DB::String(20);
+        $this->tag  = DB::String(array("size"=>20,"not_null"=>true));
         $this->book = DB::Relation("Books",DB::MANY);
     }
 }
@@ -82,7 +82,7 @@ foreach($books->ByAuthor($author) as $book) {
     $book->pages = 20; 
     $book->save();
 }
-
+exit();
 /* select (passing a value instead of a object) and update test */
 $books = new Books;
 foreach($books->ByAuthorId($author->id) as $book) {
