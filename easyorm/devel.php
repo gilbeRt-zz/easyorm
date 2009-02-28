@@ -74,8 +74,8 @@ function easyorm_check_model($model) {
                 $table->$nmodel  = DB::Integer(array("required"=>true));
                 $table->$model   = DB::Integer(array("required"=>true));
                 /* create reference (many::many) table */
-                easyorm_create_table($table,false);
-                /*  */
+                $table->create_table(); 
+                /* create unique index */
                 $table->add_index(DB::UNIQUE,array($model,$nmodel));
             } else if ($val->rel == DB::MANY) {
                 /**
@@ -87,29 +87,7 @@ function easyorm_check_model($model) {
         }
     }
     /* now compare the model against the DB table */
-    easyorm_create_table($dbm,$dbm->getTableStructure());
-}
-
-function easyorm_create_table($model,$table) {
-    if ($table===false) {
-        /* create the table */
-        $model->create_table(get_object_vars($model));
-    } else {
-        /* compare our model against the table (add new column) */
-        foreach(get_object_vars($model) as $col=>$def) {
-            if (!$def InstanceOf DB) continue;
-            if ($def->type == 'relation') continue;
-            if (!isset($table[$col])) {
-                $model->add_column($col,$def);
-            }
-        }
-        /* compare table against model (delete column) */
-        foreach($table as $id=>$column) {
-            if (!isset($model->$id)) {
-                $model->del_column($id,$column);
-            }
-        }
-    }
+    $dbm->create_table();
 }
 
 function easyorm_create_index() {

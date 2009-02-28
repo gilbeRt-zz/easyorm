@@ -159,6 +159,7 @@ abstract class EasyORM  extends ORecord {
      *
      */
     public final static function Execute($sql) {
+        echo "+ $sql\n";
         return self::$dbm->Execute($sql);
     }
 
@@ -179,11 +180,31 @@ abstract class EasyORM  extends ORecord {
         return $oSql->ProcessTableDetails($result);
     }
 
-    final function create_table($param) {
+    final public function create_table() {
         $dbm = & self::$dbm;
         $sql = & self::$sql;
-        $csql = $sql->create_table($this->table,$param);
-        return self::Execute($csql);
+        $table = $this->getTableStructure();
+        $model = get_object_vars($this);
+        if ($table==false) {
+            /* there isn't a table yet */
+            $csql = $sql->create_table($this->table,$param);
+            return self::Execute($csql);
+        } else {
+            /* compare our model against the table (add new column) */
+            foreach($model as $col=>$def) {
+                if (!$def InstanceOf DB) continue;
+                if ($def->type == 'relation') continue;
+                if (!isset($table[$col])) {
+                    $this->add_column($col,$def);
+                }
+            }
+            /* compare table against model (delete column) */
+            foreach($table as $id=>$column) {
+                if (!isset($model->$id)) {
+                    $this->del_column($id,$column);
+                }
+            }
+        }
     }
 
     final function add_index($type,$columns) {
@@ -208,7 +229,7 @@ abstract class EasyORM  extends ORecord {
      *
      *  
      */
-    final function add_column($column,DB $def) {
+    final private function add_column($column,DB $def) {
         $dbm = & self::$dbm;
         $sql = & self::$sql;
         return self::Execute($sql->add_column($this->table,$column,$def));
@@ -222,7 +243,7 @@ abstract class EasyORM  extends ORecord {
      *  @param string $column The Column name to delete
      *  @return bool True if success.
      */
-    final function del_column($column) {
+    final private function del_column($column)  {
         return self::Execute(self::$sql->del_column($this->table,$column));
     }
 

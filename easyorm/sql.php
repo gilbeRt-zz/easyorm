@@ -103,7 +103,8 @@ abstract class StdSQL {
                 throw new Exception("Internal error, don't how to handle {$parse[1]} sql type");
         }
     }
-
+    
+    
     public function create_table($table,$def) {
         if (!is_array($def) || count($def) == 0) {
             return false;
