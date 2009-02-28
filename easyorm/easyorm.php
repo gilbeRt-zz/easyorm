@@ -160,6 +160,7 @@ abstract class EasyORM  extends ORecord {
      */
     public final static function Execute($sql) {
         echo "+ $sql\n";
+        self::doConnect();
         return self::$dbm->Execute($sql);
     }
 
@@ -178,18 +179,31 @@ abstract class EasyORM  extends ORecord {
             return false;
         }
         return $oSql->ProcessTableDetails($result);
+        }
+    
+    final public function get_relation($relation) {
+        foreach(get_object_vars($this) as $col=>$value) {
+            if (!$value InstanceOf DB) continue;
+            if ($value->type=='relation' && strtolower($value->extra)==strtolower($relation)) {
+                return $col;
+            }
+        }
+        return false;
     }
 
     final public function create_table() {
-        $dbm = & self::$dbm;
         $sql = & self::$sql;
+        $this->scheme();
         $table = $this->getTableStructure();
         $model = get_object_vars($this);
         if ($table==false) {
-            /* there isn't a table yet */
-            $csql = $sql->create_table($this->table,$param);
-            return self::Execute($csql);
+            /* there isn't a table yet, so create one */
+            $csql = $sql->create_table($this->table,$model);
+            self::Execute($csql);
         } else {
+            /* there is a table yet, so change it until it looks    */
+            /* as our model                                         */
+
             /* compare our model against the table (add new column) */
             foreach($model as $col=>$def) {
                 if (!$def InstanceOf DB) continue;
@@ -200,19 +214,79 @@ abstract class EasyORM  extends ORecord {
             }
             /* compare table against model (delete column) */
             foreach($table as $id=>$column) {
-                if (!isset($model->$id)) {
+                if (!isset($this->$id)) {
                     $this->del_column($id,$column);
                 }
             }
         }
+        $this->check_relations();
+    }
+
+    final private function check_relations() {
+        foreach(get_object_vars($this) as $xcol => $def) {
+            if (!$def InstanceOf DB) continue;
+            if ($def->type == 'relation') {
+                if (!is_subclass_of($def->extra,"easyorm")) {
+                    throw new Exception("Error, {$this->table}::$col reference to a class doesn't exists {$def->extra}");
+                }
+                $rel = new $def->extra;
+                $rel->scheme();
+                $col =  $rel->get_relation(get_class($this));
+                if ($col===false) {
+                    throw new Exception("There is not a column that represent the relationship to {$this->table} into {$def->extra}");
+                }
+                if ($rel->$col->rel == DB::MANY && DB::MANY == $def->rel) {
+                    /**
+                     *  Many <-> Many
+                     *  Create a auxiliar table to save the relation ship.
+                     */
+                    $nmodel = strtolower($def->extra);
+                    $model  = strtolower($this->table);
+                    $tmp = new DevelORM;
+                    $tmp->table = strcmp($model,$nmodel)<1 ? "${model}_{$nmodel}" : "{$nmodel}_$model";
+                    $tmp->scheme();
+                    $tmp->$nmodel  = DB::Integer(array("required"=>true));
+                    $tmp->$model   = DB::Integer(array("required"=>true));
+                    /* create reference (many::many) table */
+                    $tmp->create_table(); 
+                    /* create unique index */
+                    $tmp->add_index(DB::UNIQUE,array($model,$nmodel));
+                    $tmp = null;/* release memory */
+                } else if ($def->rel == DB::ONE and $rel->$col->rel == DB::MANY) {
+                    /**
+                     *  Many -> One relation ship, create an
+                     *  index.
+                     */
+                    $table = $this->getTableStructure();
+                    if (!isset($table[$xcol])) {
+                        $this->add_column($xcol,DB::Integer(11));
+                    }
+                    $this->add_index(DB::INDEX,array($xcol));
+                }
+            }
+        }
+    }
+    
+    final function get_index() {
+        $sql = & self::$sql;
+        $index = $this->Query($sql->GetIndexs($this->table));
+        return $sql->ProcessIndexs($index);
     }
 
     final function add_index($type,$columns) {
-        $dbm = & self::$dbm;
         $sql = & self::$sql;
         switch($type) {
             case DB::UNIQUE:
             case DB::INDEX:
+                $index = $this->get_index();
+                if (isset($index[$type])) {
+                    /* let's see if there is already an index as we need */
+                    foreach($index[$type] as $index) {
+                        if (array_diff($index,$columns) === array()) {
+                            return true;
+                        }
+                    }
+                }
                 $name = $this->table."_".implode("_",$columns);
                 $name = strtolower($name);
                 $oSql = $sql->create_index($this->table,$name,$type,$columns);
@@ -226,11 +300,9 @@ abstract class EasyORM  extends ORecord {
 
     /** 
      *  Add Column
-     *
      *  
      */
     final private function add_column($column,DB $def) {
-        $dbm = & self::$dbm;
         $sql = & self::$sql;
         return self::Execute($sql->add_column($this->table,$column,$def));
     }
@@ -247,7 +319,7 @@ abstract class EasyORM  extends ORecord {
         return self::Execute(self::$sql->del_column($this->table,$column));
     }
 
-    final function & __call($name,$params) {
+    final public function & __call($name,$params) {
         $action = substr($name,0,3);
         //var_dump($name,$params);
         switch (strtolower($action)) {
@@ -332,6 +404,10 @@ class DB {
     }
 }
 
-EasyORM::import("sql.php");
 
+final class DevelORM extends EasyORM {
+    function data() {}
+}
+
+EasyORM::import("sql.php");
 ?>

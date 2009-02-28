@@ -50,6 +50,24 @@ class MysqlSQL extends StdSQL {
         }
         return $columns;
     }
+
+    public function GetIndexs($table) {
+        return "SHOW INDEX FROM ".$this->SkipFieldName($table);
+    }
+
+    public function ProcessIndexs($indexs) {
+        if(!is_array($indexs)) {
+            return false;
+        }
+        $result = array();
+        foreach($indexs as $index) {
+            if (!is_object($index)) continue;
+            $type = $index->Non_unique ? "index" : "unique";
+            $result[$type][$index->Key_name][] = $index->Column_name;
+        } 
+        return $result;
+    }
+
 }
 
 class MysqlDBM implements DBMBase {

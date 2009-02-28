@@ -26,76 +26,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-class DevelORM extends EasyORM {
-    function data() {}
-}
-
-function easyorm_get_model_relationship($model,$relation) {
-    if (!$model InstanceOf EasyORM) return false;
-    foreach(get_object_vars($model) as $col=>$value) {
-        if (!$value InstanceOf DB) continue;
-        if ($value->type=='relation' && strtolower($value->extra)==strtolower($relation)) {
-            return $col;
-        }
-    }
-    return false;
-}
-
-function easyorm_check_model($model) {
-    if (!is_subclass_of($model,"easyorm")) {
-        throw new Exception("$model is not a EasyORM subclass");
-    }
-    $dbm = new $model;
-    $dbm->scheme();
-    /**
-      *  Check relationship with other classes
-      */
-    foreach(get_object_vars($dbm) as $col=>$val) {
-        if (!$val InstanceOf DB) continue;
-        if ($val->type=='relation') {
-            if (!is_subclass_of($val->extra,"easyorm")) {
-                throw new Exception("Error, $mode::$col reference to a class doesn't exists {$val->extra}");
-            }
-            $rel = new $val->extra;
-            $rel->scheme();
-            $col = easyorm_get_model_relationship($rel,$model);
-            if ($col===false) {
-                throw new Exception("There is not a column that represent the relationship to $model into {$val->extra}");
-            }
-            if ($rel->$col->rel == DB::MANY && DB::MANY == $val->rel) {
-                /**
-                 *  Many <-> Many
-                 *  Create a auxiliar table to save the relation ship.
-                 */
-                $nmodel = strtolower($val->extra);
-                $model  = strtolower($model);
-                $table = new DevelORM;
-                $table->table = strcmp($model,$nmodel)<1 ? "${model}_{$nmodel}" : "{$nmodel}_$model";
-                $table->$nmodel  = DB::Integer(array("required"=>true));
-                $table->$model   = DB::Integer(array("required"=>true));
-                /* create reference (many::many) table */
-                $table->create_table(); 
-                /* create unique index */
-                $table->add_index(DB::UNIQUE,array($model,$nmodel));
-            } else if ($val->rel == DB::MANY) {
-                /**
-                 *  Many -> One relation ship, create an
-                 *  index.
-                 */
-                easyorm_create_index($dbm->table,$col);
-            }
-        }
-    }
-    /* now compare the model against the DB table */
-    $dbm->create_table();
-}
-
-function easyorm_create_index() {
-}
-
 foreach(get_declared_classes() as $class) {
     if (!is_subclass_of($class,"easyorm") || strtolower($class)=='develorm') continue;
-    easyorm_check_model($class);
+    $dbm = new $class;
+    $dbm->create_table();
 }
 
 ?>

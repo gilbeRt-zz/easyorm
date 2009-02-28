@@ -166,6 +166,8 @@ abstract class StdSQL {
     abstract public function SkipValue($name);
     abstract public function SkipFieldName($name);
     abstract public function GetTableDetails($table);
+    abstract public function GetIndexs($table);
+    abstract public function ProcessIndexs($index);
     abstract public function ProcessTableDetails($table);
 }
 
