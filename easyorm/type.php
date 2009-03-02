@@ -26,11 +26,52 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-foreach(get_declared_classes() as $class) {
-    if (!is_subclass_of($class,"easyorm") || strtolower($class)=='develorm') 
-        continue;
-    $dbm = new $class;
-    $dbm->create_table();
+class DB {
+    const ONE='one';
+    const MANY='many';
+    const UNIQUE='unique';
+    const INDEX='index';
+    public $type;
+    public $size;
+    public $rel;
+    public $extra;
+
+    function __construct($type,$extras) {
+        $this->type=$type;
+        if (count($extras)==1 && is_numeric($extras[0]))  {
+            $this->size=$extras[0];
+        } else { 
+            foreach ($extras[0] as $k=>$v) {
+                $this->$k=$v;
+            }
+        }
+        if (isset($this->auto_increment)&&$this->auto_increment) {
+            $this->primary_key = true;
+        }
+    }
+
+    public static function String() {
+        $param = func_get_args();
+        if (count($param)==0) {
+            $param[] = 255;
+        }
+        return new DB("string",$param);
+    }
+
+    public static function Integer() {
+        $param = func_get_args();
+        if (count($param)==0) {
+            $param[] = 11;
+        }
+        return new DB("integer",$param);
+    }
+
+    public static function Relation($class,$rel=DB::ONE) {
+        if (!is_subclass_of($class,"EasyORM")) {
+            throw new DBException(DBException::SUBCLASS,$class,"EasyORM");
+        }
+        return new DB("relation",array(array("rel"=>$rel,"extra"=>$class)));
+    }
 }
 
 ?>

@@ -26,11 +26,23 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-foreach(get_declared_classes() as $class) {
-    if (!is_subclass_of($class,"easyorm") || strtolower($class)=='develorm') 
-        continue;
-    $dbm = new $class;
-    $dbm->create_table();
+
+final class DBException extends Exception {
+    const URI       =   '%s is an invalid connection URI';
+    const MISSDRIVER=   'There is not driver for %s';
+    const DRIVER    =   'The driver %s is not working well';
+    const SUBCLASS  =   '%s is not a subclass of %s';
+    const DBMBASE   =   '%s does not implements DBMBase interface';
+    const DBCONN    =   'Error while connecting to the DB';
+    const RELCLASS  =   'Error, %s::%s reference to a class doesn\'t exists %s';
+    const RELCOL    =   'There is not a column that represent the relationship to %s into %s';
+    const TYPE      =   'Unknown type %s';
+
+    function __construct() {
+        $params = func_get_args();
+        $this->message = call_user_func_array('sprintf',$params);
+    }
+
 }
 
 ?>

@@ -84,7 +84,7 @@ abstract class EasyORM  extends ORecord {
      *
      *
      */
-    final public function scheme() {
+    final public function schema() {
         $id = DB::Integer(array("auto_increment"=>true));
         $this->id = $id;
         $this->data();
@@ -104,13 +104,13 @@ abstract class EasyORM  extends ORecord {
         extract(parse_url($param));
         $db = substr($path,1);
         if (!isset($scheme)) {
-            throw new Exception("$param is an invalid connection URI");
+            throw new DBException(DBException::URI,$param);
         }
         if (!EasyORM::import(EORM_DRIVER_DIR."/$scheme.php")) {
-            throw new Exception("There is not a driver for {$scheme}");
+            throw new DBException(DBException::MISSDRIVER,$scheme);
         }
         if (!EasyORM::isDriver($scheme)) {
-            throw new Exception("The driver $scheme is not working well");
+            throw new DBException(DBException::DRIVER,$scheme);
         }
         self::$dbm = new self::$drivers[$scheme]["dbm"]($host,$user,$password,$db);
         self::$sql = new self::$drivers[$scheme]["sql"];
@@ -118,10 +118,10 @@ abstract class EasyORM  extends ORecord {
 
     public final static function registerDriver($driver,$dbm,$sql) {
         if (!is_subclass_of($sql,"StdSQL")) {
-            throw new Exception("$sql is not a subclass of StdSQL");
+            throw new DBException(DBException::SUBCLASS,$sql,"StdSQL");
         }
         if (array_search("DBMBase",class_implements($dbm))===false) {
-            throw new Exception("$dbm do not implements DBMBase interface");
+            throw new DBException(DBException::DBMBASE,$dbm);
         }
         self::$drivers[$driver] = array("dbm"=> $dbm,"sql"=> $sql);
     }
@@ -148,7 +148,7 @@ abstract class EasyORM  extends ORecord {
         $oDbm = & self::$dbm;
         if (!$oDbm->isConnected()) {
             if (!$oDbm->doConnect()) {
-                throw new Exception("Error while connecting to the DB");
+                throw new DBException(DBException::DBCONN);
             }
         }
     }
@@ -184,16 +184,21 @@ abstract class EasyORM  extends ORecord {
     final public function get_relation($relation) {
         foreach(get_object_vars($this) as $col=>$value) {
             if (!$value InstanceOf DB) continue;
-            if ($value->type=='relation' && strtolower($value->extra)==strtolower($relation)) {
+            $value->extra = strtolower($value->extra);
+            $relation     = strtolower($relation);
+            if ($value->type=='relation' && $value->extra==$relation) {
                 return $col;
             }
         }
         return false;
     }
 
-    final public function create_table() {
+    final public function create_table($add_id=true) {
         $sql = & self::$sql;
-        $this->scheme();
+        $this->schema();
+        if (!$add_id) {
+            unset($this->id);
+        }
         $table = $this->getTableStructure();
         $model = get_object_vars($this);
         if ($table==false) {
@@ -227,13 +232,13 @@ abstract class EasyORM  extends ORecord {
             if (!$def InstanceOf DB) continue;
             if ($def->type == 'relation') {
                 if (!is_subclass_of($def->extra,"easyorm")) {
-                    throw new Exception("Error, {$this->table}::$col reference to a class doesn't exists {$def->extra}");
+                    throw new DBException(DBException::RELCLASS,$this->table,$col,$def->extra);
                 }
                 $rel = new $def->extra;
-                $rel->scheme();
+                $rel->schema();
                 $col =  $rel->get_relation(get_class($this));
                 if ($col===false) {
-                    throw new Exception("There is not a column that represent the relationship to {$this->table} into {$def->extra}");
+                    throw new DBException(DBException::RELCOL,$this->table,$def->extra);
                 }
                 if ($rel->$col->rel == DB::MANY && DB::MANY == $def->rel) {
                     /**
@@ -244,11 +249,11 @@ abstract class EasyORM  extends ORecord {
                     $model  = strtolower($this->table);
                     $tmp = new DevelORM;
                     $tmp->table = strcmp($model,$nmodel)<1 ? "${model}_{$nmodel}" : "{$nmodel}_$model";
-                    $tmp->scheme();
+                    $tmp->schema();
                     $tmp->$nmodel  = DB::Integer(array("required"=>true));
                     $tmp->$model   = DB::Integer(array("required"=>true));
                     /* create reference (many::many) table */
-                    $tmp->create_table(); 
+                    $tmp->create_table(false); 
                     /* create unique index */
                     $tmp->add_index(DB::UNIQUE,array($model,$nmodel));
                     $tmp = null;/* release memory */
@@ -293,14 +298,19 @@ abstract class EasyORM  extends ORecord {
                 $this->Execute($oSql);
                 break;
             default:
-                throw new Exception('Unkown $type');
+                throw new DBException(DBException::TYPE,$type);
                 break;
         }
     }
 
     /** 
      *  Add Column
-     *  
+     *
+     *  This function add a new column to the table.
+     *
+     *  @param string $column Column name, 
+     *  @param DB $def Table definition
+     *  @return bool True if success
      */
     final private function add_column($column,DB $def) {
         $sql = & self::$sql;
@@ -321,7 +331,6 @@ abstract class EasyORM  extends ORecord {
 
     final public function & __call($name,$params) {
         $action = substr($name,0,3);
-        //var_dump($name,$params);
         switch (strtolower($action)) {
             case "add":
                 break;
@@ -332,8 +341,9 @@ abstract class EasyORM  extends ORecord {
     }
 
     final public function save() {
-        var_dump($this->id);
-        die();
+        if (!isset($this->id)) {
+        } else {
+        }
     }
 
     final public function __set($var,$value) {
@@ -356,58 +366,12 @@ abstract class EasyORM  extends ORecord {
     abstract function data();
 }
 
-class DB {
-    const ONE='one';
-    const MANY='many';
-    const UNIQUE='unique';
-    const INDEX='index';
-    public $type;
-    public $size;
-    public $rel;
-    public $extra;
-
-    function __construct($type,$extras) {
-        $this->type=$type;
-        if (count($extras)==1 && is_numeric($extras[0]))  {
-            $this->size=$extras[0];
-        } else { 
-            foreach ($extras[0] as $k=>$v) {
-                $this->$k=$v;
-            }
-        }
-        if (isset($this->auto_increment)&&$this->auto_increment) {
-            $this->primary_key = true;
-        }
-    }
-
-    public static function String() {
-        $param = func_get_args();
-        if (count($param)==0) {
-            $param[] = 255;
-        }
-        return new DB("string",$param);
-    }
-
-    public static function Integer() {
-        $param = func_get_args();
-        if (count($param)==0) {
-            $param[] = 11;
-        }
-        return new DB("integer",$param);
-    }
-
-    public static function Relation($class,$rel=DB::ONE) {
-        if (!is_subclass_of($class,"EasyORM")) {
-            throw new Exception("$class is not an EasyORM subclass");
-        }
-        return new DB("relation",array(array("rel"=>$rel,"extra"=>$class)));
-    }
-}
-
 
 final class DevelORM extends EasyORM {
     function data() {}
 }
 
+EasyORM::import("exception.php");
+EasyORM::import("type.php");
 EasyORM::import("sql.php");
 ?>
