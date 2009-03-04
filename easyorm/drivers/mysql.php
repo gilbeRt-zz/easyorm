@@ -112,6 +112,10 @@ class MysqlDBM implements DBMBase {
     function Execute($sql) {
         return mysql_unbuffered_query($sql,$this->dbm)!==false;
     }
+
+    function Get_Insert_Id() {
+        return mysql_insert_id($this->dbm);
+    }
 }
 
 EasyORM::registerDriver("mysql","MysqlDBM","MysqlSQL");

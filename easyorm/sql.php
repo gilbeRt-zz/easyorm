@@ -78,6 +78,15 @@ abstract class StdSQL {
         return $sql;
     }
 
+    public function update($table,$values,$where=array()) {
+        $ndata = array();
+        foreach($values as $col=>$value) {
+            $ndata[] = $this->SkipFieldName($col)."=".$this->SkipValue($value);
+        }
+        $sql = "UPDATE $table SET ".implode(",",$ndata);
+        return $sql;
+    }
+
     private function get_sql_type($col) {
         switch (strtolower($col->type)) {
             case 'string':
@@ -175,6 +184,7 @@ interface DBMBase {
     public function __construct($host,$user,$password,$db);
     public function doconnect();
     public function isconnected();
+    public function Get_Insert_Id();
 }
 
 ?>

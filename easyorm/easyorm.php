@@ -67,6 +67,8 @@ abstract class EasyORM  extends ORecord {
     private static $drivers;
     private static $dbm;
     private static $sql;
+    private $_schema=null;
+    private $_data  =array();
     private $table=false;
 
     final public function __construct() {
@@ -75,8 +77,12 @@ abstract class EasyORM  extends ORecord {
         }
         $params = func_get_args();
         if (count($params) > 0) {
-            /* insert */
-            //var_dump($this,$params);
+            foreach($params as $param) {
+                foreach($param as $col => $value) {
+                    $this->$col = $value;
+                }
+                $this->save();
+            }
         } 
     }
 
@@ -85,10 +91,13 @@ abstract class EasyORM  extends ORecord {
      *
      */
     final public function schema() {
-        $id = DB::Integer(array("auto_increment"=>true));
-        $this->id = $id;
-        $this->data();
-        $this->id = $id;
+        if ($this->_schema===null) {
+            $id = DB::Integer(array("auto_increment"=>true));
+            $this->id = $id;
+            $this->data();
+            $this->id = $id;
+        }
+        return $this->_schema;
     }
 
     /**
@@ -179,10 +188,10 @@ abstract class EasyORM  extends ORecord {
             return false;
         }
         return $oSql->ProcessTableDetails($result);
-        }
+    }
     
     final public function get_relation($relation) {
-        foreach(get_object_vars($this) as $col=>$value) {
+        foreach($this->schema() as $col=>$value) {
             if (!$value InstanceOf DB) continue;
             $value->extra = strtolower($value->extra);
             $relation     = strtolower($relation);
@@ -195,12 +204,11 @@ abstract class EasyORM  extends ORecord {
 
     final public function create_table($add_id=true) {
         $sql = & self::$sql;
-        $this->schema();
+        $model=$this->schema();
         if (!$add_id) {
-            unset($this->id);
+            unset($model['id']);
         }
         $table = $this->getTableStructure();
-        $model = get_object_vars($this);
         if ($table==false) {
             /* there isn't a table yet, so create one */
             $csql = $sql->create_table($this->table,$model);
@@ -219,7 +227,7 @@ abstract class EasyORM  extends ORecord {
             }
             /* compare table against model (delete column) */
             foreach($table as $id=>$column) {
-                if (!isset($this->$id)) {
+                if (!isset($model[$id])) {
                     $this->del_column($id,$column);
                 }
             }
@@ -228,19 +236,19 @@ abstract class EasyORM  extends ORecord {
     }
 
     final private function check_relations() {
-        foreach(get_object_vars($this) as $xcol => $def) {
+        foreach($this->schema() as $xcol => $def) {
             if (!$def InstanceOf DB) continue;
             if ($def->type == 'relation') {
                 if (!is_subclass_of($def->extra,"easyorm")) {
                     throw new DBException(DBException::RELCLASS,$this->table,$col,$def->extra);
                 }
                 $rel = new $def->extra;
-                $rel->schema();
+                $rschema=$rel->schema();
                 $col =  $rel->get_relation(get_class($this));
                 if ($col===false) {
                     throw new DBException(DBException::RELCOL,$this->table,$def->extra);
                 }
-                if ($rel->$col->rel == DB::MANY && DB::MANY == $def->rel) {
+                if ($rschema[$col]->rel == DB::MANY && DB::MANY == $def->rel) {
                     /**
                      *  Many <-> Many
                      *  Create a auxiliar table to save the relation ship.
@@ -257,7 +265,7 @@ abstract class EasyORM  extends ORecord {
                     /* create unique index */
                     $tmp->add_index(DB::UNIQUE,array($model,$nmodel));
                     $tmp = null;/* release memory */
-                } else if ($def->rel == DB::ONE and $rel->$col->rel == DB::MANY) {
+                } else if ($def->rel == DB::ONE and $rschema[$col]->rel == DB::MANY) {
                     /**
                      *  Many -> One relation ship, create an
                      *  index.
@@ -340,9 +348,28 @@ abstract class EasyORM  extends ORecord {
         return $this;
     }
 
+    final private function get_row_data() {
+        $params = array();
+        foreach($this->schema() as $col=>$def) {
+            if (!isset($_data[$col]))
+                continue;
+            $params[$col] = $_data[$col];
+        }
+        return $params;
+    }
+
     final public function save() {
-        if (!isset($this->id)) {
+        $_data = & $this->_data;
+        $sql   = & self::$sql;
+        if (!isset($_data['id'])) {
+            $params = $this->get_row_data();
+            $iSql = $sql->Insert($this->table,$params);
+            $this->Execute($iSql);
+            $this->id = self::$dbm->Get_Insert_Id(); 
         } else {
+            $params = $this->get_row_data();
+            $iSql = $sql->Update($this->table,$params);
+            die($iSql);
         }
     }
 
@@ -352,8 +379,11 @@ abstract class EasyORM  extends ORecord {
                 $this->$var = strtolower($value);
                 break;
             default:
-                if ($value instanceof DB)
-                    $this->$var = $value;
+                if ($value instanceof DB) {
+                    $this->_schema[$var] = $value;
+                    return; 
+                }
+                $this->_data[$var] = $value;
                 break;
         } 
     }
@@ -361,7 +391,6 @@ abstract class EasyORM  extends ORecord {
     final public function __get($var) {
         return isset($this->$var) ? $this->$var : false;
     }
-
 
     abstract function data();
 }

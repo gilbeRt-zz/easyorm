@@ -62,7 +62,10 @@ $author = new Author;
 $author->name = "Foobar";
 $author->surname = "Author";
 $author->save();
+$author->name = "Cesar";
+$author->save();
 
+die();
 /* add two books */
 $author->addBook(array("pages"=>30,"title"=>"somebook"),array("pages"=>20,"title"=>"another one"));
 
