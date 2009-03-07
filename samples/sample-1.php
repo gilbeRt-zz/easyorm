@@ -53,7 +53,7 @@ class Tags extends EasyORM {
 }
 
 function query_debug($action,$sql) {
-    echo "+ $action  = $sql\n";
+    echo "+ $action\t=\t$sql\n";
 }
 
 /* Set connection parameter */

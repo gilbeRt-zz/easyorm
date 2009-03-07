@@ -105,7 +105,21 @@ abstract class StdSQL {
         }
     }
 
-    private function get_col_definition($col) {
+    private function get_col_definition($col,$val) {
+        $col = $this->SkipFieldName($col)." ".$this->get_sql_type($val);
+        /* primary key */
+        if (isset($val->primary_key) && $val->primary_key) 
+            $col .= " primary key ";
+        /* auto increment */
+        if (isset($val->auto_increment) && $val->auto_increment) 
+            $col .= " auto_increment ";
+        
+        /*  not null */
+        if (isset($val->required) && $val->required) 
+            $col .= " NOT NULL ";
+        else 
+            $col .= " NULL ";
+        return $col;
     }
 
     protected function get_col_type($col) {
@@ -133,22 +147,7 @@ abstract class StdSQL {
             foreach($def as $col=>$val) {
                 if (!$val InstanceOf DB) continue;
                 if ($val->type=='relation') continue;
-                $col = $this->SkipFieldName($col)." ".$this->get_sql_type($val);
-                /* primary key */
-                if (isset($val->primary_key) && $val->primary_key) {
-                    $col .= " primary key ";
-                }
-                /* auto increment */
-                if (isset($val->auto_increment) && $val->auto_increment) {
-                    $col .= " auto_increment ";
-                }
-                /*  not null */
-                if (isset($val->required) && $val->required) {
-                    $col .= " NOT NULL ";
-                } else {
-                    $col .= " NULL ";
-                }
-                $cols[] = $col;
+                $cols[] = $this->get_col_definition($col,$val);
             }
         $sql.= implode(",",$cols).")";
         return $sql;
@@ -157,8 +156,7 @@ abstract class StdSQL {
     public function add_column($table,$name,$definition) {
         if (!$definition InstanceOf DB) return false;
         $table = $this->SkipFieldName($table);
-        $name  = $this->SkipFieldName($name);
-        $def   = $name." ".$this->get_sql_type($definition);
+        $def   = $this->get_col_definition($name,$definition);
         return "ALTER TABLE $table ADD COLUMN  $def";
     }
 
