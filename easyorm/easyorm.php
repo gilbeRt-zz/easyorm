@@ -50,8 +50,9 @@ abstract class ORecord implements Iterator {
      *
      */
     final public function & current() {
+        $data = & $this->_data;
         foreach(get_object_vars($this->records[$this->actual]) as $key => $value) {
-            $this->$key = $value;
+            $data[$key] = $value;
         }
         return $this;
     }
@@ -455,7 +456,13 @@ abstract class EasyORM  extends ORecord {
         foreach($this->schema() as $col=>$def) {
             if (!isset($_data[$col]))
                 continue;
-            $params[$col] = $_data[$col];
+            if ( $def->type == 'relation' ) {
+                if (!$_data[$col] InstanceOf $def->extra)
+                    throw new DBException(DBException::FKey,$def->extra,$col);
+                $params[$col] = $_data[$col]->id;
+            } else {
+                $params[$col] = $_data[$col];
+            }
         }
         return $params;
     }
@@ -494,7 +501,7 @@ abstract class EasyORM  extends ORecord {
                 $col = new $table[$column]->extra;
                 $foreing = $col->get_relation(get_class($this));
                 foreach($params as $param) {
-                    $param[$foreing] = $data['id'];
+                    $param[$foreing] = $this;
                     $col->__construct($param);
                     $col->flush();
                 } 
@@ -527,7 +534,7 @@ abstract class EasyORM  extends ORecord {
      *
      */
     final public function __get($var) {
-        return isset($this->$var) ? $this->$var : false;
+        return isset($this->_data[$var]) ? $this->_data[$var] : false;
     }
 
     abstract function data();

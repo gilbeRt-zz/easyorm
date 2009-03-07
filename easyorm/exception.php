@@ -38,6 +38,7 @@ final class DBException extends Exception {
     const RELCOL    =   'There is not a column that represent the relationship to %s into %s';
     const TYPE      =   'Unknown type %s';
     const NOTFUNC   =   'The %s is not a valid function';
+    const FKey      =   'You cannot must use an %s object at column %s';
 
     function __construct() {
         $params = func_get_args();
