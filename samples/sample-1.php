@@ -86,6 +86,7 @@ new Books(array("author"=>$author,"pages"=>20,"title"=>"foobar"));
 
 /* select and update test */
 $books = new Books;
+die();
 foreach($books->ByAuthor($author) as $book) {
     $book->pages = 20; 
     $book->save();
