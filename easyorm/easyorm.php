@@ -439,17 +439,16 @@ abstract class EasyORM  extends ORecord {
         return self::Execute(self::$sql->del_column($this->table,$column));
     }
 
-    final public function & __call($name,$params) {
-        $action = substr($name,0,3);
-        switch (strtolower($action)) {
-            case "add":
-                break;
-            default:
-                break;
-        }
-        return $this;
+    /**
+     *
+     */
+    final public function flush() {
+        $this->_data = null;
     }
 
+    /**
+     *
+     */
     final private function get_row_data() {
         $_data = & $this->_data;
         $params = array();
@@ -480,6 +479,35 @@ abstract class EasyORM  extends ORecord {
         }
     }
 
+    /**
+     *
+     */
+    final public function & __call($name,$params) {
+        $data = & $this->_data;
+        $action = substr($name,0,3);
+        switch (strtolower($action)) {
+            case "add":
+                $table  = $this->schema();
+                $column = strtolower(substr($name,3));
+                if (!isset($table[$column]) || $table[$column]->type != "relation") 
+                    throw new DBException(DBException::NOTFUNC,$name);
+                $col = new $table[$column]->extra;
+                $foreing = $col->get_relation(get_class($this));
+                foreach($params as $param) {
+                    $param[$foreing] = $data['id'];
+                    $col->__construct($param);
+                    $col->flush();
+                } 
+                break;
+            default:
+                break;
+        }
+        return $this;
+    }
+
+    /**
+     *
+     */
     final public function __set($var,$value) {
         switch($var) {
             case "table":
@@ -495,6 +523,9 @@ abstract class EasyORM  extends ORecord {
         } 
     }
 
+    /**
+     *
+     */
     final public function __get($var) {
         return isset($this->$var) ? $this->$var : false;
     }
