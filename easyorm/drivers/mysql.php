@@ -37,7 +37,7 @@ class MysqlSQL extends StdSQL {
     }
 
     public function GetTableDetails($table) {
-        return "desc $table";
+        return "DESC $table";
     }
 
 

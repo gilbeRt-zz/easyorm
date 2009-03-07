@@ -52,8 +52,14 @@ class Tags extends EasyORM {
     }
 }
 
+function query_debug($action,$sql) {
+    echo "+ $action  = $sql\n";
+}
+
 /* Set connection parameter */
 EasyORM::SetDB("mysql://root@localhost/easyorm");
+EasyORM::Hook("on_query","query_debug");
+EasyORM::Hook("on_exec" ,"query_debug");
 
 EasyORM::SetupAll();
 

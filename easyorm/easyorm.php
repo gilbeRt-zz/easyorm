@@ -39,10 +39,16 @@ abstract class ORecord implements Iterator {
     protected $records;
     protected $actual=0;
 
+    /**
+     *
+     */
     final public function rewind() {
         $this->actual = 0;
     }
 
+    /**
+     *
+     */
     final public function & current() {
         foreach(get_object_vars($this->records[$this->actual]) as $key => $value) {
             $this->$key = $value;
@@ -50,27 +56,64 @@ abstract class ORecord implements Iterator {
         return $this;
     }
 
+    /**
+     *
+     */
     final public function key() {
         return $this->actual;
     }
 
+    /**
+     *
+     */
     final public function next() {
         $this->actual++;
     }
 
+    /**
+     *
+     */
     final public function valid() {
         return $this->actual < count($this->records);
     }
 } 
 
+/**
+ *
+ */
 abstract class EasyORM  extends ORecord {
+    /**
+     *
+     */
     private static $drivers;
+    /**
+     *
+     */
     private static $dbm;
+    /**
+     *
+     */
     private static $sql;
+    /**
+     *
+     */
+    private static $hooks=array();
+    /**
+     *
+     */
     private $_schema=null;
+    /**
+     *
+     */
     private $_data  =array();
+    /**
+     *
+     */
     private $table=false;
 
+    /**
+     *
+     */
     final public function __construct() {
         if ($this->table === false) {
             $this->table = strtolower(get_class($this));
@@ -88,7 +131,6 @@ abstract class EasyORM  extends ORecord {
 
     /**
      *
-     *
      */
     final public function schema() {
         if ($this->_schema===null) {
@@ -99,6 +141,31 @@ abstract class EasyORM  extends ORecord {
         }
         return $this->_schema;
     }
+
+    /**
+     *
+     */
+    final public function Hook($action,$function) {
+        $hook = & self::$hooks;
+        if (!is_callable($function))
+            throw new DBException(DBException::NOTFUNC,$function);
+        if (!isset($hook[$action]))
+            $hook[$action] = array();
+        $hook[$action][] = $function;
+    }
+
+    /**
+     *
+     */
+    final private function ExecHook($action) {
+        $params = func_get_args();
+        $hook   = & self::$hooks;
+        if (!isset($hook[$action]))
+            return; /* no action */
+        foreach ($hook[$action] as $fnc) {
+            call_user_func_array($fnc,$params);
+        } 
+    } 
 
     /**
      *  Set DB 
@@ -125,6 +192,9 @@ abstract class EasyORM  extends ORecord {
         self::$sql = new self::$drivers[$scheme]["sql"];
     }
 
+    /**
+     *
+     */
     public final static function registerDriver($driver,$dbm,$sql) {
         if (!is_subclass_of($sql,"StdSQL")) {
             throw new DBException(DBException::SUBCLASS,$sql,"StdSQL");
@@ -135,10 +205,16 @@ abstract class EasyORM  extends ORecord {
         self::$drivers[$driver] = array("dbm"=> $dbm,"sql"=> $sql);
     }
 
+    /**
+     *
+     */
     public final static function isDriver($driver) {
         return isset(self::$drivers[$driver]);
     }
 
+    /**
+     *
+     */
     public final static function import($file){
         static $loaded=array();
         $file=dirname(__FILE__)."/$file";
@@ -149,10 +225,16 @@ abstract class EasyORM  extends ORecord {
         return isset($loaded[$file]);
     }
 
+    /**
+     *
+     */
     public final static function SetupAll() {
         self::import("devel.php");
     }
 
+    /**
+     *
+     */
     private final static function doConnect() {
         $oDbm = & self::$dbm;
         if (!$oDbm->isConnected()) {
@@ -164,22 +246,27 @@ abstract class EasyORM  extends ORecord {
 
     /** 
      *  
-     *
-     *
      */
     public final static function Execute($sql) {
-        echo "+ $sql\n";
+        self::ExecHook("on_exec",$sql);
         self::doConnect();
         return self::$dbm->Execute($sql);
     }
 
-    protected final static function Query($sql) {
+    /** 
+     *  
+     */
+    protected final function Query($sql) {
         $oDbm = & self::$dbm;
+        self::ExecHook("on_query",$sql);
         self::doConnect();
         return $oDbm->BufferedQuery($sql);
     }
 
 
+    /** 
+     *  
+     */
     final function getTableStructure() {
         $oSql = & self::$sql;
         $sql  = $oSql->getTableDetails($this->table);
@@ -190,7 +277,10 @@ abstract class EasyORM  extends ORecord {
         return $oSql->ProcessTableDetails($result);
     }
     
-    final public function get_relation($relation) {
+    /** 
+     *  
+     */
+    final private function get_relation($relation) {
         foreach($this->schema() as $col=>$value) {
             if (!$value InstanceOf DB) continue;
             $value->extra = strtolower($value->extra);
@@ -202,6 +292,9 @@ abstract class EasyORM  extends ORecord {
         return false;
     }
 
+    /** 
+     *  
+     */
     final public function create_table($add_id=true) {
         $sql = & self::$sql;
         $model=$this->schema();
@@ -234,7 +327,10 @@ abstract class EasyORM  extends ORecord {
         }
         $this->check_relations();
     }
-
+    
+    /**
+     *
+     */
     final private function check_relations() {
         foreach($this->schema() as $xcol => $def) {
             if (!$def InstanceOf DB) continue;
@@ -280,12 +376,18 @@ abstract class EasyORM  extends ORecord {
         }
     }
     
+    /**
+     *
+     */
     final function get_index() {
         $sql = & self::$sql;
         $index = $this->Query($sql->GetIndexs($this->table));
         return $sql->ProcessIndexs($index);
     }
 
+    /**
+     *
+     */
     final function add_index($type,$columns) {
         $sql = & self::$sql;
         switch($type) {
@@ -349,6 +451,7 @@ abstract class EasyORM  extends ORecord {
     }
 
     final private function get_row_data() {
+        $_data = & $this->_data;
         $params = array();
         foreach($this->schema() as $col=>$def) {
             if (!isset($_data[$col]))
@@ -358,18 +461,22 @@ abstract class EasyORM  extends ORecord {
         return $params;
     }
 
+    /**
+     *
+     *
+     *
+     */
     final public function save() {
-        $_data = & $this->_data;
         $sql   = & self::$sql;
-        if (!isset($_data['id'])) {
+        if (!isset($this->_data['id'])) {
             $params = $this->get_row_data();
-            $iSql = $sql->Insert($this->table,$params);
+            $iSql   = $sql->Insert($this->table,$params);
             $this->Execute($iSql);
             $this->id = self::$dbm->Get_Insert_Id(); 
         } else {
             $params = $this->get_row_data();
-            $iSql = $sql->Update($this->table,$params);
-            die($iSql);
+            $iSql   = $sql->Update($this->table,$params,array("id"=>$params['id']));
+            $this->Execute($iSql);
         }
     }
 

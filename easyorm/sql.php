@@ -84,6 +84,13 @@ abstract class StdSQL {
             $ndata[] = $this->SkipFieldName($col)."=".$this->SkipValue($value);
         }
         $sql = "UPDATE $table SET ".implode(",",$ndata);
+        if ( count($where)>0 ) {
+            $tmp = array();
+            foreach($where as $col=>$value) {
+                $tmp[] = $this->SkipFieldName($col)."=".$this->SkipValue($value);
+            }
+            $sql .= " WHERE ".implode(" and ",$tmp);
+        }
         return $sql;
     }
 
@@ -96,6 +103,9 @@ abstract class StdSQL {
             default:
                 throw new Exception("Internal Error, Don't know how to representate the {$col->type} in SQL");
         }
+    }
+
+    private function get_col_definition($col) {
     }
 
     protected function get_col_type($col) {

@@ -37,6 +37,7 @@ final class DBException extends Exception {
     const RELCLASS  =   'Error, %s::%s reference to a class doesn\'t exists %s';
     const RELCOL    =   'There is not a column that represent the relationship to %s into %s';
     const TYPE      =   'Unknown type %s';
+    const NOTFUNC   =   'The %s is not a valid function';
 
     function __construct() {
         $params = func_get_args();
