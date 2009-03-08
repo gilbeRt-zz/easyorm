@@ -83,10 +83,10 @@ $book->save();
 
 /* adding another book (another way)  */
 new Books(array("author"=>$author,"pages"=>20,"title"=>"foobar"));
+die();
 
 /* select and update test */
 $books = new Books;
-die();
 foreach($books->ByAuthor($author) as $book) {
     $book->pages = 20; 
     $book->save();
@@ -104,4 +104,5 @@ foreach($author->getBook() as $book) {
     $book->pages=30;
     $book->save();
 }
+
 ?>

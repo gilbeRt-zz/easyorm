@@ -261,7 +261,7 @@ abstract class EasyORM  extends ORecord {
         $oDbm = & self::$dbm;
         self::ExecHook("on_query",$sql);
         self::doConnect();
-        return $oDbm->BufferedQuery($sql);
+        $this->records =  $oDbm->BufferedQuery($sql);
     }
 
 
@@ -271,7 +271,8 @@ abstract class EasyORM  extends ORecord {
     final function getTableStructure() {
         $oSql = & self::$sql;
         $sql  = $oSql->getTableDetails($this->table);
-        $result = self::query($sql);
+        self::Query($sql);
+        $result =  & $this->records;
         if (!$result) {
             return false;
         }
@@ -382,8 +383,8 @@ abstract class EasyORM  extends ORecord {
      */
     final function get_index() {
         $sql = & self::$sql;
-        $index = $this->Query($sql->GetIndexs($this->table));
-        return $sql->ProcessIndexs($index);
+        $this->Query($sql->GetIndexs($this->table));
+        return $sql->ProcessIndexs($this->records);
     }
 
     /**
@@ -445,7 +446,7 @@ abstract class EasyORM  extends ORecord {
      */
     final public function flush() {
         $this->_data  = null;
-        $this->record=array();
+        $this->record = array();
     }
 
     /**
@@ -467,6 +468,10 @@ abstract class EasyORM  extends ORecord {
         }
         return $params;
     }
+
+    public function Select() {
+    }
+
 
     /**
      *
