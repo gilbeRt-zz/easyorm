@@ -137,7 +137,7 @@ abstract class EasyORM  extends ORecord {
         if ($this->_schema===null) {
             $id = DB::Integer(array("auto_increment"=>true));
             $this->id = $id;
-            $this->data();
+            $this->def();
             $this->id = $id;
         }
         return $this->_schema;
@@ -444,7 +444,8 @@ abstract class EasyORM  extends ORecord {
      *
      */
     final public function flush() {
-        $this->_data = null;
+        $this->_data  = null;
+        $this->record=array();
     }
 
     /**
@@ -490,7 +491,7 @@ abstract class EasyORM  extends ORecord {
      *
      */
     final public function & __call($name,$params) {
-        $data = & $this->_data;
+        $def = & $this->_data;
         $action = substr($name,0,3);
         switch (strtolower($action)) {
             case "add":
@@ -537,12 +538,12 @@ abstract class EasyORM  extends ORecord {
         return isset($this->_data[$var]) ? $this->_data[$var] : false;
     }
 
-    abstract function data();
+    abstract function def();
 }
 
 
 final class DevelORM extends EasyORM {
-    function data() {}
+    function def() {}
 }
 
 EasyORM::import("exception.php");
